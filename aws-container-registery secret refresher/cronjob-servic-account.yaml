@@ -1,0 +1,9 @@
+#-------------------------------------------------------------------------------------
+# PREREQUISITE 
+# CHANGE NAMESPACE AND NAME OF SERVICEACCOUNT
+#-------------------------------------------------------------------------------------  
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cronjob-sa
+  namespace: dev

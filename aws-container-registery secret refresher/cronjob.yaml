@@ -1,0 +1,72 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ecr-creds-refresh
+  namespace: dev
+spec:
+  schedule: 0 */11 * * *
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: ecr-creds-refresh
+            image: umergulzar223/ecr-cronjob-base:latest
+            command:
+            - /bin/sh
+            - '-c'
+            - >-
+              aws --version 
+
+              aws ecr get-login-password --region us-east-1
+
+              echo "deleting imagepull secret..."
+
+              kubectl delete secret -n dev --ignore-not-found ${SECRET_NAME}
+
+              echo "recreating imagepull secret..."
+
+              kubectl create secret -n dev docker-registry ${SECRET_NAME} \
+
+              --docker-server=<YOUR REGISTRY SERVER> \
+
+              --docker-username=AWS \
+
+              --docker-password="$(aws ecr get-login-password --region us-east-1)"  echo "secret recreated!!"
+            #-------------------------------------------------------------------------------------
+            # PREREQUISITE 
+            # CREATE AWS-CREDENTIALS SECRET MANUALLY TO RUN THING CRONJOB WITH YOUR AWS ACCESS 
+            # ID, SECRET, SESSION_TOKEN
+
+
+            # kubectl create secret generic aws-credentials   -n nextplane-staging   
+            # --from-literal=aws_access_key_id="<ENTER YOUR ACCESS ID>"   
+            # --from-literal=aws_secret_access_key="<ENTER YOUR SECRET>"
+            # --from-literal=aws_session_token="<ENTER YOUR SESSION TOKEN>"   
+            # --dry-run=client -o yaml | kubectl apply -f -
+
+            #-------------------------------------------------------------------------------------                                
+            env:
+            - name: AWS_REGION
+              value: us-east-1
+            - name: SECRET_NAME
+              value: ecr-creds
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: aws_access_key_id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: aws_secret_access_key
+            - name: AWS_SESSION_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: aws_session_token
+            imagePullPolicy: IfNotPresent
+          restartPolicy: OnFailure
+          serviceAccountName: cronjob-sa
+          serviceAccount: cronjob-sa
