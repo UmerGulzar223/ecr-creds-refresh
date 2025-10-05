@@ -27,7 +27,7 @@ The process is handled through a **Kubernetes CronJob** that runs periodically a
 ### 1. **Service Account**
 File: `cronjob-servic-account.yaml`
 
-This ServiceAccount (`cronjob-sa`) allows the CronJob to interact with the Kubernetes API — specifically to create and delete secrets in the target namespace (`nextplane-staging`).
+This ServiceAccount (`cronjob-sa`) allows the CronJob to interact with the Kubernetes API — specifically to create and delete secrets in the target namespace.
 
 ---
 
@@ -36,7 +36,7 @@ File: `cronjob-role.yaml`
 
 This Role defines the **permissions** needed by the CronJob:
 - `create`, `get`, and `delete` permissions for `secrets`
-- Scoped to the namespace (`nextplane-staging`)
+- Scoped to the namespace.
 
 ---
 
@@ -51,7 +51,7 @@ Without this binding, the CronJob wouldn’t have access to manage Kubernetes se
 ### 4. **AWS Credentials Secret**
 Manually created using:
 ```bash
-kubectl create secret generic aws-credentials   -n nextplane-staging   --from-literal=aws_access_key_id=<ACCESS_KEY>   --from-literal=aws_secret_access_key=<SECRET_KEY>   --from-literal=aws_session_token=<SESSION_TOKEN>
+kubectl create secret generic aws-credentials   -n dev   --from-literal=aws_access_key_id=<ACCESS_KEY>   --from-literal=aws_secret_access_key=<SECRET_KEY>   --from-literal=aws_session_token=<SESSION_TOKEN>
 ```
 
 This secret provides temporary AWS credentials used by the CronJob to authenticate to ECR and request new tokens.
@@ -68,13 +68,6 @@ It runs every **11 hours** (`0 */11 * * *`) and performs these actions:
 2. Deletes the old ECR image pull secret  
 3. Creates a new one with an updated authentication token  
 4. Verifies the operation and logs success
-
-**Command snippet inside the CronJob:**
-```bash
-aws ecr get-login-password --region us-east-1
-kubectl delete secret -n nextplane-staging --ignore-not-found ${SECRET_NAME}
-kubectl create secret -n nextplane-staging docker-registry ${SECRET_NAME}   --docker-server=921060721169.dkr.ecr.us-east-1.amazonaws.com   --docker-username=AWS   --docker-password="$(aws ecr get-login-password --region us-east-1)"
-```
 
 ---
 
@@ -105,7 +98,7 @@ kubectl create secret -n nextplane-staging docker-registry ${SECRET_NAME}   --do
 
 4. **Create the AWS Credentials Secret**
    ```bash
-   kubectl create secret generic aws-credentials      -n nextplane-staging      --from-literal=aws_access_key_id=<ACCESS_KEY>      --from-literal=aws_secret_access_key=<SECRET_KEY>      --from-literal=aws_session_token=<SESSION_TOKEN>
+   kubectl create secret generic aws-credentials      -n dev      --from-literal=aws_access_key_id=<ACCESS_KEY>      --from-literal=aws_secret_access_key=<SECRET_KEY>      --from-literal=aws_session_token=<SESSION_TOKEN>
    ```
 
 5. **Deploy the CronJob**
@@ -115,21 +108,12 @@ kubectl create secret -n nextplane-staging docker-registry ${SECRET_NAME}   --do
 
 6. **Verify**
    ```bash
-   kubectl get cronjob -n nextplane-staging
-   kubectl get pods -n nextplane-staging
+   kubectl get cronjob -n dev
+   kubectl get pods -n dev
    ```
 
 You should see a new job running every 11 hours automatically.
 
----
-
-## 🔍 Manual Testing (Optional)
-
-If you want to test the logic manually, you can convert the CronJob into a **Pod** and execute commands interactively:
-```bash
-kubectl apply -f pod-test.yaml
-kubectl exec -it ecr-creds-refresh-test -n nextplane-staging -- sh
-```
 
 ---
 
@@ -150,16 +134,6 @@ kubectl exec -it ecr-creds-refresh-test -n nextplane-staging -- sh
 
 ## 👨‍💻 Maintainer
 **Author:** Muhammad Umer  
-**Organization:** Teammate Technology  
-**Environment:** `nextplane-staging`  
-**Region:** `us-east-1`
-
----
-
-## 🕒 Schedule Summary
-| Task | Frequency | Description |
-|------|------------|-------------|
-| ECR token refresh | Every 11 hours | Refreshes ECR login credentials before expiration |
 
 ---
 
